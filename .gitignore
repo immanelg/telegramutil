@@ -5,6 +5,7 @@ dist/
 wheels/
 *.egg-info
 *.env
+!example.env
 *.session
 .venv
 *.csv
