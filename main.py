@@ -11,8 +11,9 @@ def usage():
     print("You will be prompted for login code")
     print()
     print("COMMANDS:")
-    print("    -L: print list of subscribed channels")
-    print("    -S: subscribe to a list of channels")
+    print("    -LL: print list of subscribed channels")
+    print("    -L: print list of all chats")
+    print("    -S: subscribe to a list of channels from stdin by links")
     print()
     print("OPTIONS:")
     print("    --help: print this help message")
@@ -39,9 +40,32 @@ match sys.argv[1:]:
             if dialog.is_channel:
                 username = dialog.entity.username or (dialog.entity.usernames and dialog.entity.usernames[0].username) or ''
                 username and print(f"t.me/{username}")
+    case ["-LL"]:
+        dialogs = client.get_dialogs()
+        for dialog in dialogs:
+            print(f"{dialog.title},{dialog.id}")
     case ["-S"]:
         for link in sys.stdin:
             client(JoinChannelRequest(link))
+    case ["-C", id]:
+            chat = client.get_input_entity(int(id))
+            i = 0
+            for message in client.iter_messages(chat):
+                print("Id:", message.id)
+                print("Message:", message.message)
+                # print("Media:", message.media)
+                print("File:", message.file)
+                print("Photo:", message.photo)
+                print("Video:", message.video)
+                print("Voice:", message.voice)
+                print("Audio:", message.audio)
+                print("Sticker:", message.sticker)
+                print("Doc:", message.document)
+                print("---------------------------------------------")
+                i += 1
+                if i > 128: break
+
+            print(i)
     case _:
         usage()
 
