@@ -24,10 +24,10 @@ def usage():
     print("    TELEGRAM_API_HASH")
     sys.exit(0)
 
-phone: str    = os.environ["TELEGRAM_PHONE"]      or usage()
-password: str = os.environ["TELEGRAM_PASSWORD"]   or usage()
-api_id: int   = int(os.environ["TELEGRAM_API_ID"] or usage())
-api_hash: str = os.environ["TELEGRAM_API_HASH"]   or usage()
+phone: str    = os.environ.get("TELEGRAM_PHONE")      or usage()
+password: str = os.environ.get("TELEGRAM_PASSWORD")   or usage()
+api_id: int   = int(os.environ.get("TELEGRAM_API_ID") or usage())
+api_hash: str = os.environ.get("TELEGRAM_API_HASH")   or usage()
 
 client = TelegramClient("current", api_id, api_hash)
 
