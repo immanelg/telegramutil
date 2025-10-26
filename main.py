@@ -57,38 +57,73 @@ match sys.argv[1:]:
             from telethon.utils import is_audio, is_gif, is_image, is_video
             chat = client.get_input_entity(int(id))
             n = 0
+            last_group_id = None
             for message in client.iter_messages(chat, reverse=True):
-                print("Id:", message.id)
-                print("GroupId:", message.grouped_id) # album
-                print("Date:", message.date)
-                print("Entities:", message.entities)
-                print("Message:", message.message)
-                print("Poll:", message.poll)
-                print("File!:", message.file)
-                if f := message.file:
-                    print("audio video gif image -- ", is_audio(f), is_video(f), is_gif(f), is_image(f))
-                    print("file.name:", f.name)
-                    # print(dir(f))
-                    for attr in 'duration', 'emoji', 'ext', 'height', 'id', 'media', 'mime_type', 'name', 'performer', 'size', 'sticker_set', 'title', 'width':
-                        if hasattr(f, attr): 
-                            if v := getattr(f, attr):
-                                print(attr, v)
-                print("Forward:", message.forward)
-                if fw := message.forward:
-                    chat = fw.chat
-                    print("fwd", chat.title, chat.id)
-                print("Reactions:", message.reactions)
-                # print("Media:", message.media)
-                # print("Photo:", message.photo)
-                # print("Video:", message.video)
-                # print("Voice:", message.voice)
-                # print("Audio:", message.audio)
-                # print("Sticker:", message.sticker)
-                # print("Doc:", message.document)
-                print("---------------------------------------------")
+                dump = 0
+                if dump:
+                    print("Id:", message.id)
+                    print("GroupId:", message.grouped_id) # album
+                    print("Date:", message.date)
+                    print("Entities:", message.entities)
+                    print("Message:", message.message)
+                    print("Poll:", message.poll)
+                    print("File!:", message.file)
+                    if f := message.file:
+                        print("audio video gif image -- ", is_audio(f), is_video(f), is_gif(f), is_image(f))
+                        print("file.name:", f.name)
+                        # print(dir(f))
+                        for attr in 'duration', 'emoji', 'ext', 'height', 'id', 'media', 'mime_type', 'name', 'performer', 'size', 'sticker_set', 'title', 'width':
+                            if hasattr(f, attr): 
+                                if v := getattr(f, attr):
+                                    print(attr, v)
+                    print("Forward:", message.forward)
+                    if fw := message.forward:
+                        chat = fw.chat
+                        print("fwd", chat.title, chat.id)
+                    print("Reactions:", message.reactions)
+                    # print("Media:", message.media)
+                    # print("Photo:", message.photo)
+                    # print("Video:", message.video)
+                    # print("Voice:", message.voice)
+                    # print("Audio:", message.audio)
+                    # print("Sticker:", message.sticker)
+                    # print("Doc:", message.document)
+                    print("---------------------------------------------")
+                else:
+                    continuing_group = message.grouped_id is not None and last_group_id == message.grouped_id
+                    last_group_id = message.grouped_id
+
+                    if continuing_group:
+                        print("(grouped)")
+                    if not continuing_group:
+                        # finish the previous one
+                        print("---")
+
+                    if not continuing_group:
+                        if fw := message.forward:
+                            chat = fw.chat
+                            print("forwarded from:", chat.title)
+
+                    ### TODO: replied to message
+                        if poll := message.poll:
+                            print("POLL: message.poll = ", poll)
+                            # POLL: message.poll =  MessageMediaPoll(poll=Poll(id=5472212957045724922, question=TextWithEntities(text='poll', entities=[]), answers=[PollAnswer(text=TextWithEntities(text='1', entities=[]), option=b'0'), PollAnswer(text=TextWithEntities(text='2', entities=[]), option=b'1')], closed=False, public_voters=True, multiple_choice=False, quiz=True, close_period=None, close_date=None), results=PollResults(min=False, results=[PollAnswerVoters(option=b'0', voters=0, chosen=False, correct=False), PollAnswerVoters(option=b'1', voters=1, chosen=True, correct=True)], total_voters=1, recent_voters=[PeerUser(user_id=8297349295)], solution='EXPLANATION!', solution_entities=[]))
+                            print("POLL:", poll.poll.question.text)
+                            for a in poll.poll.answers:
+                                print("  OPTION:", a.text.text)
+                            print("EXPLANATION:", poll.results.solution)
+                            break
+
+                        # print(message.date)
+                        if txt := message.message:
+                            print(txt)
+                    if f := message.file:
+                        print(f"File: {f.mime_type} ({f.size/1024} kb)")
+
                 n += 1
                 if n > 128: break
 
+            print("-------------------------")
             print("TOTAL:", n)
     case _:
         usage()
