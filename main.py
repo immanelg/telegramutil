@@ -7,7 +7,6 @@ import logging
 from telethon import TelegramClient
 from telethon.utils import is_audio, is_gif, is_image, is_video
 from telethon.tl.types import MessageEntityBold, MessageEntityItalic, MessageEntityCode, MessageEntityPre, MessageEntityTextUrl, MessageEntityStrike
-from telethon.extensions.markdown import unparse as markdown_unparse
 
 
 def eprint(*args, **kwargs):
@@ -32,7 +31,7 @@ def usage():
     eprint("    -L: list of all chats")
     eprint("    -LL: list of links of subscribed channels")
     eprint("    -S: restore a list of channels from links")
-    eprint("    -C id: export saved messages to ./${phonenumber}/chat-messages.md")
+    eprint("    -C id: export saved messages to ./{phonenumber}/{id}/chat-messages.md")
     eprint()
     eprint("GLOBAL OPTIONS:")
     eprint("    --help: print this help message")
@@ -175,7 +174,11 @@ async def main():
 
                             if txt := message.message:
                                 if entities := message.entities:
-                                    txt = markdown_unparse(txt, entities)
+                                    # from telethon.extensions.markdown import unparse
+                                    # from telethon.extensions.html import unparse
+                                    # txt = unparse(txt, entities)
+                                    # Both markdown and html really are broken... so whatever, who gives a shit
+                                    pass
                                 out.write(f"{txt}\n")
                                 out.write("\n")
 
