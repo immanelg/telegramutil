@@ -1,5 +1,5 @@
 [project]
-name = "telegram-get-channel-subscriptions"
+name = "tgutil"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -7,3 +7,43 @@ requires-python = ">=3.13"
 dependencies = [
     "telethon>=1.40.0",
 ]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.14.2",
+]
+
+
+[tool.ruff]
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pyenv",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    ".vscode",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "site-packages",
+    "venv",
+]
+
+line-length = 150
+indent-width = 4
+target-version = "py314"
