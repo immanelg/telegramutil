@@ -7,6 +7,7 @@ import logging
 from telethon import TelegramClient
 from telethon.utils import is_audio, is_gif, is_image, is_video
 from telethon.tl.types import MessageEntityBold, MessageEntityItalic, MessageEntityCode, MessageEntityPre, MessageEntityTextUrl, MessageEntityStrike
+from telethon.extensions.markdown import unparse as markdown_unparse
 
 
 def eprint(*args, **kwargs):
@@ -84,7 +85,7 @@ async def main():
                 chat = await client.get_input_entity(int(chatid))
                 n = 0
                 last_group_id = None
-                async for message in client.iter_messages(chat, reverse=True, limit=None):
+                async for message in client.iter_messages(chat, reverse=False, limit=2):
                     dump = 0
                     if dump:
                         out.write(f"Id: {message.id}\n")
@@ -174,28 +175,7 @@ async def main():
 
                             if txt := message.message:
                                 if entities := message.entities:
-                                    entities = sorted(entities, key=lambda x: x.offset, reverse=True)
-                                    for entity in entities:
-                                        start = entity.offset
-                                        end = entity.offset + entity.length
-                                        part = txt[start:end]
-
-                                        if isinstance(entity, MessageEntityBold):
-                                            part_md = f"**{part}**"
-                                        elif isinstance(entity, MessageEntityItalic):
-                                            part_md = f"*{part}*"
-                                        elif isinstance(entity, MessageEntityCode):
-                                            part_md = f"`{part}`"
-                                        elif isinstance(entity, MessageEntityPre):
-                                            part_md = f"```{part}```"
-                                        elif isinstance(entity, MessageEntityTextUrl):
-                                            part_md = f"[{part}]({entity.url})"
-                                        elif isinstance(entity, MessageEntityStrike):
-                                            part_md = f"~~{part}~~"
-                                        else:
-                                            continue
-
-                                        txt = txt[:start] + part_md + txt[end:]
+                                    txt = markdown_unparse(txt, entities)
                                 out.write(f"{txt}\n")
                                 out.write("\n")
 
