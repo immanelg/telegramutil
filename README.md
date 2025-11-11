@@ -16,8 +16,6 @@ cp example.env .env
 . .env
 ```
 
-Note: The script will create a persistent `$PHONE_NUM.session` file in the current dir.
-
 ### Edit the script for your needs
 To activate the virtual environment, run
 ```
@@ -28,4 +26,5 @@ source .venv/bin/activate
 ```
 uv run main.py
 ```
+The script will ask for login code, then create a directory for data for your account: `./{PHONE_NUMBER}/` with session file `./{PHONE_NUMBER}/session.session/`.
 

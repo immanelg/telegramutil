@@ -7,13 +7,14 @@ import logging
 from telethon import TelegramClient
 from telethon.utils import is_audio, is_gif, is_image, is_video
 from telethon.tl.types import MessageEntityBold, MessageEntityItalic, MessageEntityCode, MessageEntityPre, MessageEntityTextUrl, MessageEntityStrike
-
+from telethon import functions, types
 
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
 
-def usage():
+def usage(error: str = ""):
+    if error: eprint(">>>>>", error)
     eprint("Random Telegram scripting commands")
     eprint(f"Usage: {sys.argv[0]} [COMMAND] [OPTIONS...]")
     eprint()
@@ -31,17 +32,18 @@ def usage():
     eprint("    -L: list of all chats")
     eprint("    -LL: list of links of subscribed channels")
     eprint("    -S: restore a list of channels from links")
-    eprint("    -C id: export saved messages to ./{phonenumber}/{id}/chat-messages.md")
+    eprint("    -C id: export saved messages to ./{phonenumber}/{chat_id}")
+    eprint("    -F id1 id2: forward all messages (history) from 1 to 2")
     eprint()
     eprint("GLOBAL OPTIONS:")
     eprint("    --help: print this help message")
     sys.exit(0)
 
 
-phone: str = os.environ.get("TELEGRAM_PHONE") or usage()
+phone: str = os.environ.get("TELEGRAM_PHONE") or usage("phone is required")
 password: str = os.environ.get("TELEGRAM_PASSWORD") or ""
-api_id: int = int(os.environ.get("TELEGRAM_API_ID") or usage())
-api_hash: str = os.environ.get("TELEGRAM_API_HASH") or usage()
+api_id: int = int(os.environ.get("TELEGRAM_API_ID") or usage("api_id is required"))
+api_hash: str = os.environ.get("TELEGRAM_API_HASH") or usage("api_hash is required")
 
 logging.basicConfig(stream=sys.stderr, level=logging.INFO, format="[%(asctime)s] %(levelname)s %(module)s - %(message)s")
 
@@ -52,6 +54,8 @@ async def main():
     client = TelegramClient(session=session_dir/"session", api_id=api_id, api_hash=api_hash)
 
     await client.start(phone=phone, password=password, force_sms=False)
+    # result = await client(functions.help.GetTermsOfServiceUpdateRequest())
+    # print(result.stringify())
 
     # Here comes the deepest indentation I ever wrote in python (and also the sloppiest code in existence)
     match sys.argv[1:]:
@@ -84,7 +88,7 @@ async def main():
                 chat = await client.get_input_entity(int(chatid))
                 n = 0
                 last_group_id = None
-                async for message in client.iter_messages(chat, reverse=False, limit=2):
+                async for message in client.iter_messages(chat, reverse=True, limit=None):
                     dump = 0
                     if dump:
                         out.write(f"Id: {message.id}\n")
@@ -130,7 +134,7 @@ async def main():
                         # out.write("Doc:", message.document)
                         out.write("---------------------------------------------\n")
                     else:
-                        logging.info(f"Message {message.id}...")
+                        logging.info(f"Processing message id={message.id}")
                         continuing_group = message.grouped_id is not None and last_group_id == message.grouped_id
                         last_group_id = message.grouped_id
 
@@ -145,15 +149,12 @@ async def main():
                         if not continuing_group:
                             # Create message prologue.
 
-                            out.write(f"<h3 id='m_{message.id}'>Message m_{message.id}</h3>\n")
-                            out.write("\n")
-                            out.write(f"{message.date.strftime('Date: %Y-%m-%d_%H:%M:%S')}\n")
-                            out.write("\n")
+                            out.write(f"<h3 id='m_{message.id}'>Message m_{message.id}</h3>\n\n")
+                            out.write(f"{message.date.strftime('Date: %Y-%m-%d_%H:%M:%S')}\n\n")
 
                             if fw := message.forward:
                                 chat = fw.chat
-                                out.write(f"Forwarded from: {chat.title}\n")
-                                out.write("\n")
+                                out.write(f"Forwarded from: {chat.title}\n\n")
 
                             if rpl := message.reply_to:
                                 hsh = f"#m_{rpl.reply_to_msg_id}"
@@ -179,8 +180,7 @@ async def main():
                                     # txt = unparse(txt, entities)
                                     # Both markdown and html really are broken... so whatever, who gives a shit
                                     pass
-                                out.write(f"{txt}\n")
-                                out.write("\n")
+                                out.write(f"{txt}\n\n")
 
                         # In group, we are only interested in files.
                         if f := message.file:
@@ -203,8 +203,7 @@ async def main():
                             else:
                                 logging.info(f"Media cache hit: {path}")
 
-                            out.write(f"File: [{name}](tgfiles/{name}), {f.mime_type} ({int(f.size / 1024)} kb)\n")
-                            out.write("\n")
+                            out.write(f"File: [{name}](tgfiles/{name}), {f.mime_type} ({int(f.size / 1024)} kb)\n\n")
 
 
                     n += 1
@@ -214,8 +213,31 @@ async def main():
                 end_time = time.perf_counter() 
                 logging.info(f"Done. Total: {n}, took {end_time - start_time:.4f}s.")
                 out.write(f"\n\n\n------------------------------\n\n\nTOTAL: {n}\n")
+        case ["-F", id1, id2]:
+            logging.info(f"Forwarding from chat: {id1} to {id2}")
+            # Cache all dialogs to resolve entities by ID
+            await client.get_dialogs()
+            source = await client.get_input_entity(int(id1))
+            target = await client.get_input_entity(int(id2))
+            start_time = time.perf_counter()
+            n = 0
+            async for message in client.iter_messages(source, reverse=True, limit=None):
+                try:
+                    await message.forward_to(target)
+                    logging.info(f"Forwarded message id={message.id} (Date: {message.date})")
+                    n += 1
+                    # Rate limit: sleep 1 second between forwards to avoid flood waits/bans
+                    await asyncio.sleep(1)
+                except Exception as e:
+                    logging.error(f"Error forwarding message {message.id}: {e}")
+                    # Continue on error, or add break if needed
+                if n > 128:  # Optional limit for testing; remove or increase for full run
+                    logging.info("Hit optional limit of 128 messages; stopping.")
+                    break
+            end_time = time.perf_counter()
+            logging.info(f"Done forwarding. Total: {n}, took {end_time - start_time:.4f}s.")
         case _:
-            usage()
+            usage("unknown command")
 
 
 import asyncio
